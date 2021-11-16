@@ -32,5 +32,11 @@ namespace FTD2XX.Internal.Linux
 
 		[DllImport(LIBRARY_FILENAME)]
 		public static extern Constants.FT_STATUS ftdi_set_line_property2(ref Internal.Structures.ftdi_context ftdi, BitsPerWord bits, StopBits stopBits, Parity parity, bool break_on);
+
+		[DllImport(LIBRARY_FILENAME)]
+		public static extern IntPtr ftdi_get_error_string(ref Internal.Structures.ftdi_context ftdi);
+
+		[DllImport(LIBRARY_FILENAME)]
+		public static extern Constants.FT_STATUS ftdi_usb_open_string(ref Structures.ftdi_context ftdi, string desc);
 	}
 }

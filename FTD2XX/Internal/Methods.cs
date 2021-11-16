@@ -5,323 +5,366 @@ using System.Text;
 
 namespace FTD2XX.Internal
 {
-    internal static class Methods
-    {
-    	public static void ftdi_status_to_exception(Internal.Constants.FT_STATUS status)
-        {
-            switch (status)
-            {
-                case Internal.Constants.FT_STATUS.DeviceNotFound:
-                {
-                    throw new DeviceNotFoundException();
-                }
-                case Internal.Constants.FT_STATUS.DeviceNotOpened:
-                {
-                    throw new DeviceNotOpenedException();
-                }
-                case Internal.Constants.FT_STATUS.DeviceNotOpenedForErase:
-                {
-                    throw new DeviceNotOpenedException(DeviceOpenPurpose.Erase);
-                }
-                case Internal.Constants.FT_STATUS.DeviceNotOpenedForWrite:
-                {
-                    throw new DeviceNotOpenedException(DeviceOpenPurpose.Write);
-                }
-                case Internal.Constants.FT_STATUS.EEPROMEraseFailed:
-                {
-                    throw new EEPROMOperationFailedException(DeviceOperation.Erase);
-                }
-                case Internal.Constants.FT_STATUS.EEPROMNotPresent:
-                {
-                    throw new EEPROMNotPresentException();
-                }
-                case Internal.Constants.FT_STATUS.EEPROMNotProgrammed:
-                {
-                    throw new EEPROMNotProgrammedException();
-                }
-                case Internal.Constants.FT_STATUS.EEPROMReadFailed:
-                {
-                    throw new EEPROMOperationFailedException(DeviceOperation.Read);
-                }
-                case Internal.Constants.FT_STATUS.EEPROMWriteFailed:
-                {
-                    throw new EEPROMOperationFailedException(DeviceOperation.Write);
-                }
-                case Internal.Constants.FT_STATUS.FailedToWriteDevice:
-                {
-                    throw new DeviceOperationFailedException(DeviceOperation.Erase);
-                }
-                case Internal.Constants.FT_STATUS.InsufficientResources:
-                {
-                    throw new InsufficientMemoryException();
-                }
-                case Internal.Constants.FT_STATUS.InvalidArguments:
-                {
-                    throw new ArgumentException();
-                }
-                case Internal.Constants.FT_STATUS.InvalidBaudRate:
-                {
-                    throw new ArgumentException("The baud rate is invalid", "BaudRate");
-                }
-                case Internal.Constants.FT_STATUS.InvalidHandle:
-                {
-                    throw new ArgumentException("The handle is invalid", "Handle");
-                }
-                case Internal.Constants.FT_STATUS.InvalidParameter:
-                {
-                    throw new ArgumentException("The parameter is invalid");
-                }
-                case Internal.Constants.FT_STATUS.IOError:
-                {
-                    throw new System.IO.IOException();
-                }
-                case Internal.Constants.FT_STATUS.UnknownError:
-                {
-                    throw new Exception("Unknown error occurred");
-                }
-            }
-        }
+	internal static class Methods
+	{
+		public static void ftdi_status_to_exception(Internal.Constants.FT_STATUS status, ref Internal.Structures.ftdi_context ftdi)
+		{
+			string message = null;
+			IntPtr hStr = Internal.Methods.ftdi_get_error_string(ref ftdi);
+			if (hStr != IntPtr.Zero)
+			{
+				message = System.Runtime.InteropServices.Marshal.PtrToStringAuto(hStr);
+			}
+			ftdi_status_to_exception(status, message);
+		}
+
+		private static IntPtr ftdi_get_error_string(ref Structures.ftdi_context ftdi)
+		{
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Internal.Linux.Methods.ftdi_get_error_string(ref ftdi);
+					}
+			}
+			throw new PlatformNotSupportedException();
+		}
+
+		public static void ftdi_status_to_exception(Internal.Constants.FT_STATUS status, string message = null)
+		{
+			if (status != Constants.FT_STATUS.None && message != null)
+			{
+				Console.Error.WriteLine("ftdi: error {0} ({1}): {2}", (int)status, status.ToString(), message);
+			}
+			switch (status)
+			{
+				case Internal.Constants.FT_STATUS.DeviceNotFound:
+					{
+						throw new DeviceNotFoundException();
+					}
+				case Internal.Constants.FT_STATUS.DeviceNotOpened:
+					{
+						throw new DeviceNotOpenedException();
+					}
+				case Internal.Constants.FT_STATUS.DeviceNotOpenedForErase:
+					{
+						throw new DeviceNotOpenedException(DeviceOpenPurpose.Erase);
+					}
+				case Internal.Constants.FT_STATUS.DeviceNotOpenedForWrite:
+					{
+						throw new DeviceNotOpenedException(DeviceOpenPurpose.Write);
+					}
+				case Internal.Constants.FT_STATUS.EEPROMEraseFailed:
+					{
+						throw new EEPROMOperationFailedException(DeviceOperation.Erase);
+					}
+				case Internal.Constants.FT_STATUS.EEPROMNotPresent:
+					{
+						throw new EEPROMNotPresentException();
+					}
+				case Internal.Constants.FT_STATUS.EEPROMNotProgrammed:
+					{
+						throw new EEPROMNotProgrammedException();
+					}
+				case Internal.Constants.FT_STATUS.EEPROMReadFailed:
+					{
+						throw new EEPROMOperationFailedException(DeviceOperation.Read);
+					}
+				case Internal.Constants.FT_STATUS.EEPROMWriteFailed:
+					{
+						throw new EEPROMOperationFailedException(DeviceOperation.Write);
+					}
+				case Internal.Constants.FT_STATUS.FailedToWriteDevice:
+					{
+						throw new DeviceOperationFailedException(DeviceOperation.Erase);
+					}
+				case Internal.Constants.FT_STATUS.InsufficientResources:
+					{
+						throw new InsufficientMemoryException();
+					}
+				case Internal.Constants.FT_STATUS.InvalidArguments:
+					{
+						throw new ArgumentException();
+					}
+				case Internal.Constants.FT_STATUS.InvalidBaudRate:
+					{
+						throw new ArgumentException("The baud rate is invalid", "BaudRate");
+					}
+				case Internal.Constants.FT_STATUS.InvalidHandle:
+					{
+						throw new ArgumentException("The handle is invalid", "Handle");
+					}
+				case Internal.Constants.FT_STATUS.InvalidParameter:
+					{
+						throw new ArgumentException("The parameter is invalid");
+					}
+				case Internal.Constants.FT_STATUS.IOError:
+					{
+						throw new System.IO.IOException();
+					}
+				case Internal.Constants.FT_STATUS.UnknownError:
+					{
+						throw new Exception("Unknown error occurred");
+					}
+			}
+		}
+
+		public static Constants.FT_STATUS ftdi_usb_open_string(ref Structures.ftdi_context ftdi, string desc)
+		{
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.Unix:
+				{
+					return Internal.Linux.Methods.ftdi_usb_open_string(ref ftdi, desc);
+				}
+			}
+			throw new PlatformNotSupportedException();
+		}
 
 		internal static Constants.FT_STATUS ftdi_set_line_property2(ref Internal.Structures.ftdi_context /*struct ftdi_context*/ ftdi, BitsPerWord bits, StopBits stopBits, Parity parity, bool break_on)
 		{
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-					return Linux.Methods.ftdi_set_line_property2(ref ftdi, bits, stopBits, parity, break_on);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_set_line_property2(ref ftdi, bits, stopBits, parity, break_on);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
 		}
 
 		internal static Constants.FT_STATUS ftdi_set_line_property(ref Internal.Structures.ftdi_context  /*struct ftdi_context*/ ftdi, BitsPerWord bits, StopBits stopBits, Parity parity)
 		{
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-					return Linux.Methods.ftdi_set_line_property(ref ftdi, bits, stopBits, parity);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_set_line_property(ref ftdi, bits, stopBits, parity);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
 		}
 
 		public static Constants.FT_STATUS ftdi_set_baudrate(ref Internal.Structures.ftdi_context  /*struct ftdi_context*/ ftdi, int baudRate)
 		{
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-					return Linux.Methods.ftdi_set_baudrate(ref ftdi, baudRate);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_set_baudrate(ref ftdi, baudRate);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
 		}
 
 		internal static Constants.FT_STATUS ftdi_usb_reset(ref Internal.Structures.ftdi_context /*struct ftdi_context*/ ftdi)
 		{
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-					return Linux.Methods.ftdi_usb_reset(ref ftdi);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_usb_reset(ref ftdi);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
 		}
 
 		public static Constants.FT_STATUS ftdi_usb_open(ref Internal.Structures.ftdi_context ftdi, int vendor, int product)
-        {
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-					return Linux.Methods.ftdi_usb_open(ref ftdi, vendor, product);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
-        }
+		{
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_usb_open(ref ftdi, vendor, product);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
+		}
 
 		public static Constants.FT_STATUS ftdi_init(ref Internal.Structures.ftdi_context ftdi)
 		{
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-                    return Linux.Methods.ftdi_init(ref ftdi);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_init(ref ftdi);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
 		}
 
 		public static Constants.FT_STATUS ftdi_usb_close(ref Internal.Structures.ftdi_context /*struct ftdi_context*/ ftdi)
-        {
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-                    return Linux.Methods.ftdi_usb_close(ref ftdi);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					throw new PlatformNotSupportedException();
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
-        }
-        public static Constants.FT_STATUS ftdi_read_data(ref Internal.Structures.ftdi_context /*struct ftdi_context*/ ftdi, IntPtr buf, int size)
-        {
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-                    return Linux.Methods.ftdi_read_data(ref ftdi, buf, size);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
-        }
-        public static int ftdi_write_data(ref Internal.Structures.ftdi_context  /*struct ftdi_context*/ ftdi, IntPtr buf, int size)
-        {
-            switch (Environment.OSVersion.Platform)
-            {
-                case PlatformID.MacOSX:
-                {
-                    break;
-                }
-                case PlatformID.Unix:
-                {
-                    return Linux.Methods.ftdi_write_data(ref ftdi, buf, size);
-                }
-                case PlatformID.Win32NT:
-                case PlatformID.Win32S:
-                case PlatformID.Win32Windows:
-                case PlatformID.WinCE:
-                {
-					break;
-                }
-                case PlatformID.Xbox:
-                {
-                    break;
-                }
-            }
-            throw new PlatformNotSupportedException();
-        }
+		{
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_usb_close(ref ftdi);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						throw new PlatformNotSupportedException();
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
+		}
+		public static Constants.FT_STATUS ftdi_read_data(ref Internal.Structures.ftdi_context /*struct ftdi_context*/ ftdi, IntPtr buf, int size)
+		{
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_read_data(ref ftdi, buf, size);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
+		}
+		public static int ftdi_write_data(ref Internal.Structures.ftdi_context  /*struct ftdi_context*/ ftdi, IntPtr buf, int size)
+		{
+			switch (Environment.OSVersion.Platform)
+			{
+				case PlatformID.MacOSX:
+					{
+						break;
+					}
+				case PlatformID.Unix:
+					{
+						return Linux.Methods.ftdi_write_data(ref ftdi, buf, size);
+					}
+				case PlatformID.Win32NT:
+				case PlatformID.Win32S:
+				case PlatformID.Win32Windows:
+				case PlatformID.WinCE:
+					{
+						break;
+					}
+				case PlatformID.Xbox:
+					{
+						break;
+					}
+			}
+			throw new PlatformNotSupportedException();
+		}
 		/*
         public static Constants.FT_STATUS FT_SetDataCharacteristics(uint ftHandle, BitsPerWord uWordLength, StopBits uStopBits, Parity uParity)
         {
@@ -610,5 +653,5 @@ namespace FTD2XX.Internal
             throw new PlatformNotSupportedException();
         }
         */
-    }
+	}
 }
